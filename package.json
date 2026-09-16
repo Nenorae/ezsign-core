@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start:tx-worker": "node tx-worker/src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,8 +13,10 @@
   "type": "commonjs",
   "dependencies": {
     "amqplib": "^2.0.1",
+    "axios": "^1.7.9",
     "dotenv": "^17.4.2",
     "ethers": "^6.17.0",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "redis": "^4.7.0"
   }
 }

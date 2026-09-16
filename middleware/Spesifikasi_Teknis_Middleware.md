@@ -40,3 +40,7 @@ Kinerja Middleware diukur melalui skenario (FUN-01):
 *   **Proteksi PII Mutlak:** Sebanyak 0 byte data mentah (PII) yang diizinkan tembus ke antrean RabbitMQ.
 *   **Latensi Pemrosesan:** Waktu pemrosesan API wajib di bawah 500ms.
 *   **Stabilitas Operasional:** Tingkat *error rate* 0% dari 1000 *request* konkuren. Tingkat keunikan *hash* harus mencapai 100%.
+
+**Lalu lintas Web2 (Pengguna tanpa dompet):** Middleware melempar log ke RabbitMQ, lalu TX-Worker mengambil alih untuk menandatanganinya menggunakan Wallet Pool.  
+
+**Lalu lintas Web3 (Pengguna dengan dompet):** Middleware memvalidasi payload yang sudah ditandatangani oleh klien, lalu langsung menyuntikkannya ke RPC Besu. TX-Worker sama sekali tidak boleh menyentuh alur ini. Jangan mengotori worker ini dengan beban di luar domain utamanya.
