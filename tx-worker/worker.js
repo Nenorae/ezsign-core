@@ -6,7 +6,7 @@ const { ethers } = require("ethers");
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost:5672";
 const QUEUE_NAME = process.env.RABBITMQ_QUEUE || "ezsign_logging_queue";
 
-// Konfigurasi Blockchain (Hyperledger Besu RPC-Only Node 5)
+// Konfigurasi Blockchain 
 const RPC_URL = process.env.BESU_RPC_URL || "http://127.0.0.1:8545";
 const PRIVATE_KEY = process.env.MASTER_WALLET_PRIVATE_KEY;
 const CONTRACT_ADDRESS = process.env.SMART_CONTRACT_ADDRESS;
@@ -20,8 +20,7 @@ if (!PRIVATE_KEY || !CONTRACT_ADDRESS) {
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
-// ABI Minimalis - Sesuaikan dengan file Solidity milikmu
-// Merujuk pada Tabel 3.7: recordVerification() adalah fungsi utama pencetak jejak audit
+
 const contractABI = ["function recordVerification(bytes32 userHash, string docType, bytes signature, uint256 timestamp, string metadata) public returns (bool)"];
 const ezSignContract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, wallet);
 
@@ -32,8 +31,8 @@ async function startWorker() {
 
     await channel.assertQueue(QUEUE_NAME, { durable: true });
 
-    // Memaksa proses antrean berjalan sekuensial (satu per satu)
-    // Ini adalah pengamanan mekanis paling primitif untuk mencegah balapan (race condition) pada Nonce
+    // fungsi nonce
+    
     channel.prefetch(1);
     console.log(`[TX-Worker] Menunggu pesan di antrean "${QUEUE_NAME}"...`);
     console.log(`[TX-Worker] Terhubung ke RPC Besu: ${RPC_URL}`);
