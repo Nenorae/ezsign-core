@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start:middleware": "node middleware/index.js",
     "start:tx-worker": "node tx-worker/src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -12,11 +13,16 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/rate-limit": "^11.2.0",
     "amqplib": "^2.0.1",
     "axios": "^1.7.9",
     "dotenv": "^17.4.2",
     "ethers": "^6.17.0",
     "express": "^5.2.1",
+    "fastify": "^5.12.5",
+    "mysql2": "^3.24.4",
+    "pg": "^8.23.0",
     "redis": "^4.7.0"
   }
 }

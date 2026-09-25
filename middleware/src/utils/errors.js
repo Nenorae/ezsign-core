@@ -1,6 +1,51 @@
-### `src/utils/errors.js` (Kamus Eksepsi)
+'use strict';
 
-* **Peran:** Standardisasi kegagalan karena Anda tidak memakai TypeScript.
-* **Spesifikasi Wajib:**
-* Tulis kelas-kelas *Error* kustom. Contoh: `class ValidationFailError extends Error {}`, `class ExternalAPIError extends Error {}`.
-* Gunakan kelas ini di `logger_core.js` saat *throw*, agar `controller.js` bisa mendeteksi tipe *error* dan menentukan apakah harus merespons HTTP 400 atau 500.
+class AppError extends Error {
+  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR', isClientError = false) {
+    super(message);
+    this.name = this.constructor.name;
+    this.statusCode = statusCode;
+    this.code = code;
+    this.isClientError = isClientError;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+class ValidationFailError extends AppError {
+  constructor(message = 'Validasi payload gagal.') {
+    super(message, 400, 'VALIDATION_FAILED', true);
+  }
+}
+
+class ExternalAPIError extends AppError {
+  constructor(message = 'Komunikasi dengan layanan eksternal gagal.') {
+    super(message, 502, 'EXTERNAL_API_ERROR', false);
+  }
+}
+
+class DatabaseError extends AppError {
+  constructor(message = 'Terjadi kesalahan pada basis data.') {
+    super(message, 500, 'DATABASE_ERROR', false);
+  }
+}
+
+class BrokerError extends AppError {
+  constructor(message = 'Gagal mempublikasikan pesan ke antrean pesan.') {
+    super(message, 500, 'BROKER_ERROR', false);
+  }
+}
+
+class ConfigurationError extends AppError {
+  constructor(message = 'Konfigurasi sistem tidak valid.') {
+    super(message, 500, 'CONFIGURATION_ERROR', false);
+  }
+}
+
+module.exports = {
+  AppError,
+  ValidationFailError,
+  ExternalAPIError,
+  DatabaseError,
+  BrokerError,
+  ConfigurationError
+};

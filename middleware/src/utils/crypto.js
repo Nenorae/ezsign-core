@@ -1,7 +1,29 @@
-### `src/utils/crypto.js` (Mesin Pseudonimisasi)
+'use strict';
 
-* **Peran:** Merusak data mentah menjadi nilai statis yang aman.
-* **Spesifikasi Wajib:**
-* Wajib mengekspor fungsi sinkron murni. Tidak boleh ada `async/await`.
-* Hanya gunakan modul bawaan `node:crypto`.
-* Gunakan `crypto.createHmac('sha256', secretKey)` agar hasil *hash* tidak bisa dibongkar menggunakan *rainbow tables*.
+const crypto = require('node:crypto');
+
+function generateUserHash(uuid, secretKey) {
+  if (!uuid || typeof uuid !== 'string') {
+    throw new TypeError('UUID wajib berupa string non-kosong.');
+  }
+
+  const key = secretKey || process.env.SALT_SECRET || process.env.SECRET_KEY || 'ezsign_default_salt';
+  const hash = crypto.createHmac('sha256', key).update(uuid.trim()).digest('hex');
+
+  return `0x${hash}`;
+}
+
+function generateSimulatedSignature(dataPayload, secretKey) {
+  const key = secretKey || process.env.SALT_SECRET || process.env.SECRET_KEY || 'ezsign_default_salt';
+
+  const r = crypto.createHmac('sha256', `${key}:r`).update(String(dataPayload)).digest('hex');
+  const s = crypto.createHmac('sha256', `${key}:s`).update(String(dataPayload)).digest('hex');
+  const v = '1b';
+
+  return `0x${r}${s}${v}`;
+}
+
+module.exports = {
+  generateUserHash,
+  generateSimulatedSignature
+};
