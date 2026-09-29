@@ -31,7 +31,11 @@ async function main() {
 
   try {
     await database.init();
-    logger.info('[Startup] Pool database terhubung.');
+    if (database.inMemoryStore) {
+      logger.info('[Startup] Database mode: In-Memory aktif (ALLOW_IN_MEMORY_DB=true).');
+    } else {
+      logger.info('[Startup] Pool database terhubung.');
+    }
   } catch (error) {
     logger.fatal(`[Startup Fail-Fast] Database connection error: ${error.message}`);
     process.exit(1);

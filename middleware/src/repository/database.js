@@ -20,6 +20,12 @@ class DatabaseRepository {
       return this.pool;
     }
 
+    if (process.env.ALLOW_IN_MEMORY_DB === 'true' || process.env.NODE_ENV === 'test') {
+      this.inMemoryStore = new Map();
+      this.isInitialized = true;
+      return null;
+    }
+
     try {
       if (this.clientType === 'pg') {
         const { Pool } = require('pg');
