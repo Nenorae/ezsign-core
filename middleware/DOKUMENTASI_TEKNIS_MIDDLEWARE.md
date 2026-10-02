@@ -40,6 +40,11 @@
    - [6.4 Format Payload Antrean RabbitMQ (`QueuedPayload`)](#64-format-payload-antrean-rabbitmq-queuedpayload)
 7. [Matriks Variabel Lingkungan & Konfigurasi (.env)](#7-matriks-variabel-lingkungan--konfigurasi-env)
 8. [Panduan Operasional & Pemeliharaan](#8-panduan-operasional--pemeliharaan)
+   - [8.1 Menjalankan Middleware](#81-menjalankan-middleware)
+   - [8.2 Log Startup Normal (Indikator Kesiapan Sistem)](#82-log-startup-normal-indikator-kesiapan-sistem)
+   - [8.3 Pemantauan Kesehatan Operasional](#83-pemantauan-kesehatan-operasional)
+   - [8.4 Pengujian Pengiriman Log Web2](#84-pengujian-pengiriman-log-web2)
+   - [8.5 Pengujian Pengiriman Log Web3](#85-pengujian-pengiriman-log-web3)
 
 ---
 
@@ -52,7 +57,7 @@ Tujuan fundamental dari Middleware ini adalah:
 2. **Penjangkaran Identitas Terproteksi Privasi (*Privacy-Preserving Identity Anchoring*)**: Menerapkan pseudonimisasi identitas mutlak sehingga tidak ada sedikit pun data pribadi yang dapat diidentifikasi (*Personally Identifiable Information* / PII) yang bocor ke jaringan publik maupun *ledger* blockchain.
 3. **Penjamin Kredensial Multi-Klien (*Multi-Client Credential Broker*)**: Menyediakan diferensiasi perlakuan (*branching logic*) antara klien Web2 (tanpa dompet digital) dan klien Web3 (pemegang *private key* mandiri).
 
-```
+```text
 +-------------------------------------------------------------------------------+
 |                             WEB2 CORE DOMAIN                                  |
 |                                                                               |
@@ -105,7 +110,7 @@ Middleware dirancang dengan spesifikasi rekayasa perangkat lunak ketat yang menc
    - Jika `UUID` tidak valid atau tidak terdaftar pada layanan ezSign lama, sistem wajib menolak permintaan dengan status HTTP 400 Bad Request.
 
 3. **Pseudonimisasi Identitas (User Hash Generation)**:
-   - Sistem wajib mengubah data mentah identitas pengguna (`UUID`) menjadi nilai pseudonim terenkripsi (`User_Hash`) berbasis representasi hexadesimal standar blockchain (`0x` prefixed, panjang 32-byte / 64 karakter hex).
+   - Sistem wajib mengubah data mentah identitas pengguna (`UUID`) menjadi nilai pseudonim terenkripsi (`User_Hash`) berbasis representasi heksadesimal standar blockchain (`0x` prefixed, panjang 32-byte / 64 karakter hex).
    - Transformasi identitas wajib bersifat deterministik (menghasilkan hash yang identik untuk input UUID yang sama) namun searah (*irreversible*).
 
 4. **Persistensi Pemetaan Relasional (Relational Identity Mapping)**:
@@ -129,7 +134,7 @@ Implementasi Middleware wajib mematuhi parameter metrik pengujian baku **FUN-01*
 | Parameter Uji | Batasan Spesifikasi | Mekanisme Realisasi Teknis |
 | :--- | :--- | :--- |
 | **Proteksi Data Pribadi (PII)** | **0 Byte Data Mentah (Zero Leak)** menembus ke antrean RabbitMQ | Atribut `uuid`, `identityNumber`, `fullName`, dan PII lainnya dieliminasi sepenuhnya dari objek antrean. Hanya `userHash`, `docType`, `signature`, `timestamp`, dan `metadata` yang masuk antrean. |
-| **Latensi Pemrosesan API** | **Total latensi sinkron < 500 ms** (Target eksekusi lokal: < 50 ms) | Fastify JIT schema compilation, koneksi persisten *Channel Reuse* RabbitMQ, *Connection Pooling* SQL, modul crypto sinkron, dan *hard timeout* Axios (100–200ms). |
+| **Latensi Pemrosesan API** | **Total latensi sinkron < 500 ms** (Target eksekusi lokal: < 50 ms) | Fastify JIT schema compilation, koneksi persisten *Channel Reuse* RabbitMQ, *Connection Pooling* SQL, modul crypto sinkron, dan *hard timeout* Axios (100–200 ms). |
 | **Stabilitas Beban Konkuren** | **Tingkat Galat (*Error Rate*) 0%** pada lonjakan 1.000 permintaan konkuren | Arsitektur I/O non-blocking Node.js, Fastify micro-overhead HTTP pipeline, batas rate-limit memadai (5.000 req/min), dan *connection pool* terkelola. |
 | **Keunikan Hash** | **Tingkat keunikan 100%**, deterministik, bebas tabrakan (*collision-free*) | Algoritma HMAC-SHA256 dengan *secret salt* 256-bit server-side. |
 | **Keandalan Antrean (Durabilitas)** | Pesan tidak boleh hilang jika broker terhenti (*crash*) | Deklarasi antrean bersifat *durable* (`durable: true`) dan pengiriman pesan bertaraf persisten (`persistent: true` / *delivery mode 2*). |
@@ -171,7 +176,7 @@ Hierarki berkas pada modul Middleware menerapkan prinsip pemisahan tanggung jawa
 
 ```text
 middleware/
-├── DOKUMENTASI_TEKNIS_MIDDLEWARE.md  # File dokumentasi komprehensif ini
+├── DOKUMENTASI_TEKNIS_MIDDLEWARE.md  # File dokumentasi komprehensif arsitektur
 ├── index.js                           # Entry point sistem & Dependency Injection container
 ├── package.json                       # Konfigurasi package Node.js middleware
 ├── server.js                          # [Legacy] Prototipe Express lama (dipertahankan untuk referensi)
@@ -480,9 +485,9 @@ Folder ini menyediakan modul penunjang mendasar yang digunakan secara lintas lap
   3. **Generator Tanda Tangan Simulasi Web2 (`generateSimulatedSignature`)**:
      - Smart Contract pencatatan log pada blockchain mengharuskan format tanda tangan standar Web3/Ethereum yang dapat divalidasi via fungsi bawaan EVM `ecrecover`.
      - Fungsi ini mensimulasikan tanda tangan digital berukuran total **65 byte** (130 karakter hex + awalan `0x` = 132 karakter):
-       - Komponen $r$ (32 bytes): Dihasilkan dari `HMAC-SHA256(key:r, dataPayload)`.
-       - Komponen $s$ (32 bytes): Dihasilkan dari `HMAC-SHA256(key:s, dataPayload)`.
-       - Komponen $v$ (1 byte): Diberi nilai tetap `'1b'` (representasi desimal 27, penanda standar pemulihan kunci Ethereum).
+       - Komponen r (32 byte): Dihasilkan dari `HMAC-SHA256(key:r, dataPayload)`.
+       - Komponen s (32 byte): Dihasilkan dari `HMAC-SHA256(key:s, dataPayload)`.
+       - Komponen v (1 byte): Diberi nilai tetap `'1b'` (representasi desimal 27, penanda standar pemulihan kunci Ethereum).
      - Format keluaran: `0x${r}${s}${v}`.
 
 ---
@@ -574,7 +579,7 @@ Bagian ini membedah bagaimana berkas-berkas di dalam folder `api`, `broker`, `re
 
 Diagram berikut mengilustrasikan relasi ketergantungan modul satu arah (*unidirectional dependency*) dari luar ke dalam:
 
-```
+```text
 [ Klien Eksternal / Mitra ]
            |
            v (HTTP Request)
@@ -755,7 +760,7 @@ sequenceDiagram
 
 Middleware dirancang dengan prinsip ketahanan sistem di mana kegagalan pada satu subsistem dicegat secara cepat (*fail-fast*) tanpa menyebabkan kebocoran memori atau keruntuhan sistem (*cascading failure*).
 
-```
+```text
                       +----------------------------------+
                       |   HTTP Request Masuk ke Server   |
                       +-----------------+----------------+
@@ -1026,12 +1031,12 @@ Seluruh konfigurasi operasional Middleware dikendalikan melalui berkas `.env` di
 | `HOST` | Tidak | String | `0.0.0.0` | Host interface alamat IP jaringan (mendengarkan di semua antarmuka). |
 | `LOG_LEVEL` | Tidak | String | `info` | Tingkat keparahan log Pino (`trace`, `debug`, `info`, `warn`, `error`, `fatal`). |
 | `RATE_LIMIT_MAX` | Tidak | Number | `5000` | Jumlah kuota request maksimum per jendela waktu per alamat IP. |
-| `RATE_LIMIT_WINDOW`| Tidak | String | `1 minute` | Rentang jendela waktu evaluasi rate limit. |
+| `RATE_LIMIT_WINDOW` | Tidak | String | `1 minute` | Rentang jendela waktu evaluasi rate limit. |
 | `RABBITMQ_URL` | **YA** | String | `amqp://localhost:5672` | URI koneksi broker AMQP RabbitMQ. Aplikasi crash saat startup jika variabel ini kosong. |
 | `RABBITMQ_WEB2_QUEUE` | Tidak | String | `web2_pending_signature_queue` | Nama antrean RabbitMQ tujuan untuk muatan data pengguna Web2. |
 | `RABBITMQ_WEB3_QUEUE` | Tidak | String | `web3_ready_queue` | Nama antrean RabbitMQ tujuan untuk muatan data pengguna Web3. |
-| `SECRET_KEY` / `SALT_SECRET` | **YA** | String | - | Kunci rahasia server untuk komputasi HMAC-SHA256 User_Hash dan Web2 simulated signature. Wajib dijaga kerahasiaannya! |
-| `DATABASE_URL` | Opsional*| String | `postgres://...` | URI koneksi basis data persisten (format PostgreSQL atau MySQL). |
+| `SECRET_KEY` / `SALT_SECRET` | **YA** | String | - | Kunci rahasia server untuk komputasi HMAC-SHA256 User_Hash dan Web2 simulated signature. Wajib dijaga kerahasiaannya. |
+| `DATABASE_URL` | Opsional* | String | `postgres://...` | URI koneksi basis data persisten (format PostgreSQL atau MySQL). |
 | `DB_CLIENT` | Opsional | String | Otomatis via URI | Pengendali dialek driver database (`pg` atau `mysql2`). |
 | `DB_POOL_MAX` | Tidak | Number | `20` | Kapasitas batas atas koneksi simultan dalam pool basis data SQL. |
 | `ALLOW_IN_MEMORY_DB` | Tidak | Boolean | `false` | Setel `true` untuk mengaktifkan fallback database in-memory jika server database fisik tidak tersedia saat pengembangan lokal. |
@@ -1060,6 +1065,7 @@ node middleware/index.js
 ```
 
 ### 8.2 Log Startup Normal (Indikator Kesiapan Sistem)
+
 Ketika seluruh dependensi (RabbitMQ dan Database) aktif, output log terstruktur Pino akan menampilkan:
 ```text
 {"level":30,"time":"2026-09-25T14:27:00.001Z","msg":"[Startup] Inisialisasi Middleware (Logging Backend API)..."}
@@ -1069,10 +1075,12 @@ Ketika seluruh dependensi (RabbitMQ dan Database) aktif, output log terstruktur 
 ```
 
 ### 8.3 Pemantauan Kesehatan Operasional
+
 Eksekusi pemeriksaan status kesehatan server:
 ```bash
 curl -i http://localhost:3000/health
 ```
+
 Respons yang diharapkan:
 ```http
 HTTP/1.1 200 OK
@@ -1083,6 +1091,7 @@ x-correlation-id: 2f7e2586-11b3-469b-980b-483d95efc5d1
 ```
 
 ### 8.4 Pengujian Pengiriman Log Web2
+
 ```bash
 curl -i -X POST http://localhost:3000/api/v1/verify-identity \
   -H "Content-Type: application/json" \
@@ -1094,6 +1103,7 @@ curl -i -X POST http://localhost:3000/api/v1/verify-identity \
     "metadata": { "source": "curl-manual-test" }
   }'
 ```
+
 Respons yang diharapkan:
 ```http
 HTTP/1.1 202 Accepted
@@ -1104,6 +1114,7 @@ x-correlation-id: test-corr-001
 ```
 
 ### 8.5 Pengujian Pengiriman Log Web3
+
 ```bash
 curl -i -X POST http://localhost:3000/api/v1/verify-identity \
   -H "Content-Type: application/json" \
@@ -1115,6 +1126,7 @@ curl -i -X POST http://localhost:3000/api/v1/verify-identity \
     "docType": "IJAZAH"
   }'
 ```
+
 Respons yang diharapkan:
 ```http
 HTTP/1.1 202 Accepted

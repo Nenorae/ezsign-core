@@ -9,7 +9,7 @@ Komponen **Middleware (Logging Backend API)** beroperasi pada lapisan **Web2 Cor
 
 Peran utama komponen ini adalah:
 1. **API Gateway & Request Standardizer**: Menjadi titik masuk tunggal berbasis HTTP Fastify berkecepatan tinggi dengan pelacakan *Correlation ID* dan pembatasan laju (*Rate Limiting*).
-2. **Pseudonimisasi Identitas (Zero PII Leak)**: Menghasilkan `User_Hash` menggunakan HMAC-SHA256 agar data pribadi pengguna (PII seperti nomor identitas, nama lengkap, atau UUID) tidak pernah tembus ke antrean publik ataupun *blockchain* (0 byte PII leak).
+2. **Pseudonimisasi Identitas (Zero PII Leak)**: Menghasilkan `User_Hash` menggunakan HMAC-SHA256 agar data pribadi pengguna (PII seperti nomor identitas, nama lengkap, atau UUID) tidak pernah tembus ke antrean publik ataupun blockchain (0 byte PII leak).
 3. **Pemisahan Alur Kredensial (Branching Logic)**:
    - **Klien Web2**: Bertindak sebagai *Penjamin Kredensial Web2* dengan menyuntikkan tanda tangan kriptografis simulasi secara *server-side* dan mengirim payload ke antrean `web2_pending_signature_queue` untuk diproses lebih lanjut oleh Wallet Pool di TX-Worker.
    - **Klien Web3**: Memvalidasi integritas tanda tangan dompet mandiri (*client-side signature*) dan langsung meneruskannya ke antrean `web3_ready_queue`.
@@ -22,8 +22,8 @@ Peran utama komponen ini adalah:
 | Parameter Uji | Standar Spesifikasi | Hasil Implementasi |
 | :--- | :--- | :--- |
 | **Proteksi PII** | 0 byte data mentah tembus ke antrean RabbitMQ | **Terpenuhi (0 Byte PII)**: UUID mentah dieliminasi dari `QueuedPayload`. Hanya `userHash`, `docType`, `signature`, `timestamp`, dan `metadata` yang ditransmisikan. |
-| **Latensi Pemrosesan API** | < 500 ms total waktu respons sinkron | **Terpenuhi (< 50 ms lokal)**: Channel reuse RabbitMQ, Connection Pooling DB, Fastify schema compiling, dan timeout eksternal 100-200ms. |
-| **Stabilitas Beban Konkuren** | Error rate 0% pada 1000 request konkuren | **Terpenuhi**: Framework Fastify non-blocking, asynchronous I/O, in-memory channel pooling, dan Pino structured logging. |
+| **Latensi Pemrosesan API** | < 500 ms total waktu respons sinkron | **Terpenuhi (< 50 ms lokal)**: Channel reuse RabbitMQ, Connection Pooling DB, Fastify schema compiling, dan timeout eksternal 100–200 ms. |
+| **Stabilitas Beban Konkuren** | Error rate 0% pada 1.000 request konkuren | **Terpenuhi**: Framework Fastify non-blocking, asynchronous I/O, in-memory channel pooling, dan Pino structured logging. |
 | **Keunikan Hash** | Keunikan hash 100% deterministik & anti-tabrakan | **Terpenuhi**: Algoritma HMAC-SHA256 dengan secret salt menghasilkan hash unik per UUID secara konsisten. |
 | **Keandalan Antrean** | Pesan tidak boleh hilang jika broker crash | **Terpenuhi**: Mode pesan persisten (`persistent: true`) dan antrean durable (`durable: true`). |
 
@@ -52,7 +52,7 @@ Berikut adalah daftar perubahan dan berkas yang ditambahkan/diperbarui di dalam 
 
 ## 4. Spesifikasi Teknis Rinci Per Berkas
 
-### 4.1. `src/api/controller.js` (Gerbang Validasi Murni)
+### 4.1 `src/api/controller.js` (Gerbang Validasi Murni)
 
 * **Tujuan**: Menerima request HTTP, memvalidasi integritas data payload secara agresif menggunakan skema JSON, dan mengembalikan respons HTTP standar.
 * **Prinsip Desain**:
@@ -84,7 +84,7 @@ Berikut adalah daftar perubahan dan berkas yang ditambahkan/diperbarui di dalam 
 
 ---
 
-### 4.2. `src/api/server.js` (Infrastruktur Peladen Fastify)
+### 4.2 `src/api/server.js` (Infrastruktur Peladen Fastify)
 
 * **Tujuan**: Mengatur kerangka kerja HTTP berkinerja tinggi berbasis Fastify v5 (menggantikan Express).
 * **Fitur Utama**:
@@ -97,13 +97,13 @@ Berikut adalah daftar perubahan dan berkas yang ditambahkan/diperbarui di dalam 
 
 ---
 
-### 4.3. `src/service/logger_core.js` (Otak Logika Bisnis)
+### 4.3 `src/service/logger_core.js` (Otak Logika Bisnis)
 
 * **Tujuan**: Menjalankan transisi data dari siklus sinkron ke asinkron sesuai aturan bisnis sistem ezSign.
 * **Larangan Mutlak**: File ini dilarang keras mengimpor modul HTTP (Axios) atau modul DB/RabbitMQ langsung. Seluruh dependensi disuntikkan secara dinamis via konstruktor.
 * **Siklus Eksekusi (End-to-End)**:
   1. **Terima Payload**: Menerima data yang telah disanitasi dari controller.
-  2. **Validasi Eksternal**: Memanggil `ezsignApi.verifyUUID(uuid)` secara asinkron dengan batas timeout 100-200ms.
+  2. **Validasi Eksternal**: Memanggil `ezsignApi.verifyUUID(uuid)` secara asinkron dengan batas timeout 100–200 ms.
   3. **Pseudonimisasi Hash**: Memanggil `crypto.generateUserHash(uuid)` secara sinkron instan.
   4. **Perekaman Relasi**: Memanggil `database.saveMapping(uuid, userHash)` secara asinkron.
   5. **Konstruksi QueuedPayload (0 Byte PII)**: Objek baru dibentuk hanya dengan atribut `userHash`, `docType`, `timestamp`, dan `metadata`. UUID pengguna sama sekali tidak disertakan.
@@ -113,7 +113,7 @@ Berikut adalah daftar perubahan dan berkas yang ditambahkan/diperbarui di dalam 
 
 ---
 
-### 4.4. `src/broker/rabbitmq.js` (Klien Asinkronisasi)
+### 4.4 `src/broker/rabbitmq.js` (Klien Asinkronisasi)
 
 * **Tujuan**: Menghubungkan middleware dengan antrean RabbitMQ untuk eksekusi asinkron oleh TX-Worker.
 * **Spesifikasi Wajib yang Diimplementasikan**:
@@ -124,7 +124,7 @@ Berikut adalah daftar perubahan dan berkas yang ditambahkan/diperbarui di dalam 
 
 ---
 
-### 4.5. `src/repository/database.js` (Akses Basis Data SQL)
+### 4.5 `src/repository/database.js` (Akses Basis Data SQL)
 
 * **Tujuan**: Menyimpan relasi identitas universal pengguna dengan hash terenkripsi.
 * **Fitur Utama**:
@@ -135,29 +135,29 @@ Berikut adalah daftar perubahan dan berkas yang ditambahkan/diperbarui di dalam 
 
 ---
 
-### 4.6. `src/repository/ezsign_api.js` (Klien Eksternal ezSign)
+### 4.6 `src/repository/ezsign_api.js` (Klien Eksternal ezSign)
 
 * **Tujuan**: Memvalidasi status keaktifan dan keaslian UUID ke backend ezSign Web2 lama.
-* **Batas Waktu Ketat (Timeout 100-200ms)**:
+* **Batas Waktu Ketat (Timeout 100–200 ms)**:
   - Mengonfigurasi `timeout` Axios secara ketat (maksimal 200 ms).
   - Jika API eksternal mengalami latensi tinggi, request langsung dibatalkan (*fail-fast*) dengan melempar `ExternalAPIError`. Hal ini memastikan *event loop* middleware tetap bebas dan mampu melayani permintaan lain.
   - Memproyeksikan status HTTP 404/400 dari backend lama menjadi `ValidationFailError`.
 
 ---
 
-### 4.7. `src/utils/crypto.js` (Mesin Pseudonimisasi)
+### 4.7 `src/utils/crypto.js` (Mesin Pseudonimisasi)
 
 * **Tujuan**: Mengubah identitas mentah menjadi representasi matematis yang aman.
 * **Karakteristik Teknis**:
   - **Sinkron Murni**: Tanpa `async/await`, menggunakan modul native `node:crypto`.
   - **HMAC-SHA256**: Menggunakan `crypto.createHmac('sha256', secretKey)` dengan garam rahasia (*salt*) sehingga hash bersifat deterministik namun kebal terhadap serangan kamus (*rainbow tables*).
-  - **Tanda Tangan Simulasi Web2**: Menghasilkan tanda tangan kriptografis simulasi berukuran 65 byte (130 karakter hex + prefix `0x`) yang merepresentasikan komponen $r$, $s$, dan $v$ standar Web3/Ethereum.
+  - **Tanda Tangan Simulasi Web2**: Menghasilkan tanda tangan kriptografis simulasi berukuran 65 byte (130 karakter hex + awalan `0x`) yang merepresentasikan komponen r, s, dan v standar Web3/Ethereum.
 
 ---
 
-### 4.8. `src/utils/errors.js` (Kamus Eksepsi Terstandarisasi)
+### 4.8 `src/utils/errors.js` (Kamus Eksepsi Terstandarisasi)
 
-* **Tujuan**: Menyediakan hirarki class error terstruktur untuk Vanilla JavaScript.
+* **Tujuan**: Menyediakan hierarki class error terstruktur untuk Vanilla JavaScript.
 * **Daftar Class**:
   - `AppError`: Base error dengan atribut `statusCode`, `code`, dan `isClientError`.
   - `ValidationFailError`: Error validasi sisi klien (HTTP 400).
@@ -168,7 +168,7 @@ Berikut adalah daftar perubahan dan berkas yang ditambahkan/diperbarui di dalam 
 
 ---
 
-### 4.9. `src/utils/config.js` (Pemuat Konfigurasi & Logger)
+### 4.9 `src/utils/config.js` (Pemuat Konfigurasi & Logger)
 
 * **Tujuan**: Validasi lingkungan kerja dan inisialisasi modul pencatatan.
 * **Fail-Fast Environment Check**: Memastikan variabel `RABBITMQ_URL` dan `SECRET_KEY` (atau `SALT_SECRET`) tersedia; jika tidak, aplikasi akan langsung melempar `ConfigurationError`.
@@ -176,7 +176,7 @@ Berikut adalah daftar perubahan dan berkas yang ditambahkan/diperbarui di dalam 
 
 ---
 
-### 4.10. `index.js` (Orkestrator Utama & Entry Point)
+### 4.10 `index.js` (Orkestrator Utama & Entry Point)
 
 * **Tujuan**: Titik mula inisialisasi aplikasi dengan *Dependency Injection* manual.
 * **Aturan Keras (Fail-Fast)**:
@@ -194,19 +194,19 @@ Seluruh komponen telah diuji menggunakan skenario unit dan integrasi otomatis de
 
 ```text
 --- RUNNING FULL INTEGRATION VERIFICATION ---
-✔ Test 1: Crypto Deterministic & Uniqueness OK
-✔ Test 2: Crypto Simulated Signature (65-byte hex) OK
-✔ Test 3: Fastify Health Check (/health) OK (Status 200, Correlation ID disuntikkan)
-✔ Test 4: Web2 Valid Request (HTTP 202 Accepted, disalurkan ke web2_pending_signature_queue)
-✔ Test 5: Web3 Valid Request (HTTP 202 Accepted, disalurkan ke web3_ready_queue)
-✔ Test 6: Verifikasi Zero PII Leak (UUID tidak ditemukan di payload antrean RabbitMQ)
-✔ Test 7: Agresif Schema Validation - UUID kosong ditolak (HTTP 400 Bad Request)
-✔ Test 8: Agresif Schema Validation - Tipe klien non-web2/web3 ditolak (HTTP 400 Bad Request)
-✔ Test 9: Web3 tanpa signature dompet ditolak (HTTP 400 Bad Request)
-✔ Test 10: External ezSign API timeout (>200ms) tertangkap & fail-fast
-✔ Test 11: Global Error Handler menyembunyikan stack trace mentah (0 trace leak)
+[PASS] Test 1: Crypto Deterministic & Uniqueness OK
+[PASS] Test 2: Crypto Simulated Signature (65-byte hex) OK
+[PASS] Test 3: Fastify Health Check (/health) OK (Status 200, Correlation ID disuntikkan)
+[PASS] Test 4: Web2 Valid Request (HTTP 202 Accepted, disalurkan ke web2_pending_signature_queue)
+[PASS] Test 5: Web3 Valid Request (HTTP 202 Accepted, disalurkan ke web3_ready_queue)
+[PASS] Test 6: Verifikasi Zero PII Leak (UUID tidak ditemukan di payload antrean RabbitMQ)
+[PASS] Test 7: Agresif Schema Validation - UUID kosong ditolak (HTTP 400 Bad Request)
+[PASS] Test 8: Agresif Schema Validation - Tipe klien non-web2/web3 ditolak (HTTP 400 Bad Request)
+[PASS] Test 9: Web3 tanpa signature dompet ditolak (HTTP 400 Bad Request)
+[PASS] Test 10: External ezSign API timeout (>200ms) tertangkap & fail-fast
+[PASS] Test 11: Global Error Handler menyembunyikan stack trace mentah (0 trace leak)
 --- ALL CHECKS PASSED (0 ERRORS, 0 WARNINGS) ---
 ```
 
 ---
-*Dokumen ini dibuat secara otomatis sebagai dokumentasi resmi implementasi Middleware (Logging Backend API) ezSign Core Domain.*
+*Dokumen ini dibuat sebagai dokumentasi resmi implementasi dan log perubahan Middleware (Logging Backend API) ezSign Core Domain.*

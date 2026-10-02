@@ -1,2 +1,6 @@
 .env
 /node_modules
+SHA256SUM
+vault-ethereum_0.3.0_linux_amd64.zip
+vault.log
+middleware.log
